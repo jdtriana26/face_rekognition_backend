@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class AmazonRekognitionManager:
     def __init__(self):
         self.access_key = os.getenv('AWS_ACCESS_KEY_ID')
@@ -46,11 +47,15 @@ class AmazonRekognitionManager:
 
     def indexar_cara(self, collection_id, image_bytes, external_id):
         try:
+            # Limpieza básica del ID externo
+            clean_id = "".join(c for c in external_id if c.isalnum() or c in '._-')
+
             response = self.rekognition.index_faces(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
-                ExternalImageId=external_id.replace("/", "_"),  # Rekognition no recibe slashes aquí
-                DetectionAttributes=['ALL']
+                ExternalImageId=clean_id[:120],
+                DetectionAttributes=['ALL'],
+                MaxFaces=10
             )
             return response
         except Exception as e:
@@ -59,14 +64,13 @@ class AmazonRekognitionManager:
 
     def buscar_por_selfie(self, collection_id: str, image_bytes: bytes):
         try:
-            # Log para depuración: Verificamos que collection_id sea el correcto
-            print(f"🔍 Buscando en la colección de AWS: {collection_id}")
+            print(f"🔍 Buscando en AWS Rekognition Colección: {collection_id}")
 
             response = self.rekognition.search_faces_by_image(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
-                MaxFaces=20,  # Aumentamos a 20 por si hay muchas fotos anteriores
-                FaceMatchThreshold=70  # Si no encuentra nada, prueba bajando a 60
+                MaxFaces=30,
+                FaceMatchThreshold=70
             )
 
             matches = []
@@ -78,8 +82,7 @@ class AmazonRekognitionManager:
 
             return {"matches": matches}
         except self.rekognition.exceptions.ResourceNotFoundException:
-            print(f"❌ Error: La colección {collection_id} no existe en AWS.")
-            return {"error": "El evento no tiene un índice de caras creado.", "matches": []}
+            return {"error": "Colección no encontrada", "matches": []}
         except Exception as e:
             print(f"❌ Error en Búsqueda AWS: {e}")
             return {"error": str(e), "matches": []}

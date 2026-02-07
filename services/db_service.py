@@ -1,5 +1,4 @@
 import os
-import ssl
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
@@ -20,7 +19,6 @@ class DatabaseManager:
         self.db = self.client[db_name]
 
     async def check_connection(self):
-        """Verifica si la base de datos está online para el indicador de React"""
         try:
             await self.client.admin.command('ping')
             return True
@@ -29,22 +27,33 @@ class DatabaseManager:
             return False
 
     async def guardar_foto(self, nombre_evento: str, info_foto: dict):
-        """Guarda la información de la foto procesada en la colección del evento"""
-        collection = self.db[f"fotos_{nombre_evento}"]
+        # Estandarizamos el nombre de la colección con prefijo
+        nombre_coleccion = f"fotos_{nombre_evento}"
+        collection = self.db[nombre_coleccion]
         resultado = await collection.insert_one(info_foto)
         return str(resultado.inserted_id)
 
-    async def buscar_fotos_por_rostros(self, nombre_evento: str, face_ids: list):
-        """Busca URLs de fotos basándose en una lista de IDs de rostros encontrados por AWS"""
-        collection = self.db[f"fotos_{nombre_evento}"]
+    async def buscar_fotos_por_rostros(self, nombre_evento, face_ids_encontrados):
+        try:
+            # IMPORTANTE: Usamos el mismo prefijo que en guardar_foto
+            nombre_coleccion = f"fotos_{nombre_evento}"
+            coleccion = self.db[nombre_coleccion]
 
-        cursor = collection.find({"face_ids": {"$in": face_ids}})
+            print(f"🔍 Consultando MongoDB en: {nombre_coleccion}")
 
-        fotos_encontradas = []
-        async for documento in cursor:
-            fotos_encontradas.append({
-                "id": str(documento["_id"]),
-                "url": documento["url"],
-                "nombre": documento.get("nombre_archivo", "Sin nombre")
-            })
-        return fotos_encontradas
+            # Buscamos cualquier documento donde al menos un face_id de la lista coincida
+            cursor = coleccion.find({"face_ids": {"$in": face_ids_encontrados}})
+
+            fotos = []
+            async for doc in cursor:
+                fotos.append({
+                    "url": doc["url"],
+                    "caras": len(doc.get("face_ids", [])),
+                    "nombre": doc.get("nombre_archivo", "foto.jpg")
+                })
+
+            print(f"✅ Se encontraron {len(fotos)} coincidencias en Mongo")
+            return fotos
+        except Exception as e:
+            print(f"❌ Error en Mongo: {e}")
+            return []
