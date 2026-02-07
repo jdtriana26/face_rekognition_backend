@@ -95,3 +95,12 @@ async def listar_eventos():
     # Filtramos para no mostrar colecciones de sistema de mongo
     eventos_limpios = [e for e in eventos if e != "system.views"]
     return {"eventos": eventos_limpios}
+
+@app.delete("/eliminar-evento/{nombre_evento}")
+async def eliminar_evento(nombre_evento: str):
+    try:
+        # Esto borra la colección completa en MongoDB
+        await db_manager.db.drop_collection(nombre_evento)
+        return {"status": "success", "message": f"Evento {nombre_evento} eliminado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
