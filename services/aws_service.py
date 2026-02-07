@@ -59,11 +59,14 @@ class AmazonRekognitionManager:
 
     def buscar_por_selfie(self, collection_id: str, image_bytes: bytes):
         try:
+            # Log para depuración: Verificamos que collection_id sea el correcto
+            print(f"🔍 Buscando en la colección de AWS: {collection_id}")
+
             response = self.rekognition.search_faces_by_image(
                 CollectionId=collection_id,
                 Image={'Bytes': image_bytes},
-                MaxFaces=10,
-                FaceMatchThreshold=70
+                MaxFaces=20,  # Aumentamos a 20 por si hay muchas fotos anteriores
+                FaceMatchThreshold=70  # Si no encuentra nada, prueba bajando a 60
             )
 
             matches = []
@@ -73,8 +76,10 @@ class AmazonRekognitionManager:
                     "similarity": match['Similarity']
                 })
 
-            print(f"✅ AWS encontró {len(matches)} coincidencias")
             return {"matches": matches}
+        except self.rekognition.exceptions.ResourceNotFoundException:
+            print(f"❌ Error: La colección {collection_id} no existe en AWS.")
+            return {"error": "El evento no tiene un índice de caras creado.", "matches": []}
         except Exception as e:
             print(f"❌ Error en Búsqueda AWS: {e}")
             return {"error": str(e), "matches": []}
