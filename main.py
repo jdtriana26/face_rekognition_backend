@@ -86,3 +86,12 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.get("/listar-eventos")
+async def listar_eventos():
+    # Suponiendo que cada evento es una colección diferente en tu DB
+    # o que tienes un campo "evento" en tus documentos.
+    eventos = await db_manager.db.list_collection_names()
+    # Filtramos para no mostrar colecciones de sistema de mongo
+    eventos_limpios = [e for e in eventos if e != "system.views"]
+    return {"eventos": eventos_limpios}
