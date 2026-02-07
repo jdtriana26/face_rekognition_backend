@@ -5,20 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from services.db_service import DatabaseManager
 
 app = FastAPI()
-
 # 1. AJUSTE DE CORS PARA PRODUCCIÓN
-# Aquí permitimos tu localhost actual y la futura URL de Vercel
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    # Agrega aquí la URL que te dé Vercel después de subir el front, ej:
-    # "https://tu-proyecto-facial.vercel.app"
+    "https://face-rekognition-front.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Mientras pruebas el despliegue puedes dejar "*", 
-                         # pero cámbialo a la lista 'origins' después por seguridad.
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
